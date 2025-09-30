@@ -1,0 +1,936 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Space Math Asteroids</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Orbitron', sans-serif;
+            background: #000;
+            color: #fff;
+            overflow: hidden;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: radial-gradient(circle at center, #0a0a2a, #000);
+        }
+
+        h1 {
+            color: #00ffff;
+            text-shadow: 0 0 10px #00ffff;
+            margin-bottom: 20px;
+            font-size: 36px;
+        }
+
+        #gameContainer {
+            position: relative;
+            width: 1000px;
+            height: 700px;
+            border: 2px solid #00ffff;
+            border-radius: 10px;
+            box-shadow: 0 0 20px #00ffff, inset 0 0 20px rgba(0, 255, 255, 0.2);
+            overflow: hidden;
+        }
+
+        #gameCanvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #000;
+        }
+
+        #uiOverlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 10;
+        }
+
+        #levelDisplay {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            font-size: 24px;
+            color: #00ffff;
+            text-shadow: 0 0 10px #00ffff;
+        }
+
+        #scoreDisplay {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            font-size: 24px;
+            color: #ffff00;
+            text-shadow: 0 0 10px #ffff00;
+        }
+
+        #healthBar {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            width: 200px;
+            height: 20px;
+            background: rgba(255, 0, 0, 0.3);
+            border: 2px solid #ff0000;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        #healthFill {
+            height: 100%;
+            width: 100%;
+            background: linear-gradient(to right, #ff0000, #ffff00);
+            transition: width 0.3s;
+        }
+
+        #mathQuestion {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.9);
+            padding: 30px 50px;
+            border: 2px solid #00ffff;
+            border-radius: 10px;
+            text-align: center;
+            box-shadow: 0 0 30px #00ffff;
+            z-index: 20;
+            pointer-events: auto;
+            width: 400px;
+        }
+
+        #questionText {
+            font-size: 28px;
+            margin-bottom: 20px;
+            color: #00ffff;
+        }
+
+        #answerInput {
+            background: rgba(0, 0, 0, 0.7);
+            border: 2px solid #00ffff;
+            border-radius: 5px;
+            color: #fff;
+            font-size: 24px;
+            padding: 10px;
+            width: 120px;
+            text-align: center;
+            margin-bottom: 15px;
+            display: block;
+            margin: 0 auto 15px auto;
+        }
+
+        #submitAnswer {
+            background: linear-gradient(to bottom, #00aaff, #0066cc);
+            border: none;
+            border-radius: 5px;
+            color: white;
+            font-size: 18px;
+            padding: 10px 20px;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: block;
+            margin: 0 auto;
+        }
+
+        #submitAnswer:hover {
+            background: linear-gradient(to bottom, #00ccff, #0088ff);
+            box-shadow: 0 0 10px #00ccff;
+        }
+
+        #gameMessage {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.9);
+            padding: 30px 50px;
+            border: 2px solid #ffff00;
+            border-radius: 10px;
+            text-align: center;
+            box-shadow: 0 0 30px #ffff00;
+            z-index: 30;
+            display: none;
+            width: 400px;
+        }
+
+        #messageText {
+            font-size: 32px;
+            margin-bottom: 20px;
+            color: #ffff00;
+        }
+
+        #continueButton {
+            background: linear-gradient(to bottom, #ffff00, #ffaa00);
+            border: none;
+            border-radius: 5px;
+            color: #000;
+            font-size: 20px;
+            padding: 10px 25px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        #continueButton:hover {
+            background: linear-gradient(to bottom, #ffff88, #ffcc00);
+            box-shadow: 0 0 15px #ffff00;
+        }
+
+        .star {
+            position: absolute;
+            background: white;
+            border-radius: 50%;
+            animation: twinkle 5s infinite;
+        }
+
+        @keyframes twinkle {
+            0%, 100% { opacity: 0.2; }
+            50% { opacity: 1; }
+        }
+
+        .nebula {
+            position: absolute;
+            border-radius: 50%;
+            opacity: 0.1;
+            filter: blur(40px);
+        }
+    </style>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
+</head>
+<body>
+    <h1>Space Math Asteroids by Titan Buisness Pros LLC</h1>
+    <div id="gameContainer">
+        <canvas id="gameCanvas"></canvas>
+        <div id="uiOverlay">
+            <div id="levelDisplay">Level: 1</div>
+            <div id="scoreDisplay">Score: 0</div>
+            <div id="healthBar">
+                <div id="healthFill" style="width: 100%;"></div>
+            </div>
+        </div>
+        <div id="mathQuestion">
+            <div id="questionText">What is 5 + 3?</div>
+            <input type="number" id="answerInput" autofocus>
+            <br>
+            <button id="submitAnswer">Submit</button>
+        </div>
+        <div id="gameMessage">
+            <div id="messageText">Level Complete!</div>
+            <button id="continueButton">Continue</button>
+        </div>
+    </div>
+
+    <script>
+        // Game variables
+        let canvas, ctx;
+        let gameState = 'question'; // 'question', 'playing', 'levelComplete', 'gameOver'
+        let currentLevel = 1;
+        let score = 0;
+        let playerHealth = 100;
+        let playerX, playerY;
+        let playerAngle = 0;
+        let playerSpeed = 0;
+        let bullets = [];
+        let asteroids = [];
+        let alienShips = [];
+        let spaceWorms = [];
+        let blackHole = null;
+        let hugeAsteroid = null;
+        let isDoubleShot = false;
+        let stars = [];
+        let nebulas = [];
+        let lastTime = 0;
+        let keys = {};
+        let mouseX = 0, mouseY = 0;
+        let isMouseDown = false;
+        let lastShotTime = 0;
+        let shotCooldown = 300; // ms
+
+        // Math questions for each level
+        const mathQuestions = [
+            "What is 7 + 8?",
+            "What is 12 - 5?",
+            "What is 6 × 4?",
+            "What is 24 ÷ 3?",
+            "What is 15 + 9?",
+            "What is 18 - 7?",
+            "What is 5 × 6?",
+            "What is 36 ÷ 4?",
+            "What is 25 + 17?",
+            "What is 42 - 19?",
+            "What is 7 × 8?",
+            "What is 64 ÷ 8?",
+            "What is 56 + 28?",
+            "What is 75 - 36?",
+            "What is 9 × 7?",
+            "What is 81 ÷ 9?",
+            "What is 124 + 57?",
+            "What is 182 - 94?",
+            "What is 12 × 11?",
+            "What is 144 ÷ 12?",
+            "What is 256 + 189?"
+        ];
+
+        const mathAnswers = [15, 7, 24, 8, 24, 11, 30, 9, 42, 23, 56, 8, 84, 39, 63, 9, 181, 88, 132, 12, 445];
+
+        // Initialize game
+        function init() {
+            canvas = document.getElementById('gameCanvas');
+            ctx = canvas.getContext('2d');
+            
+            // Set canvas size
+            canvas.width = 1000;
+            canvas.height = 700;
+            
+            // Initialize player position
+            playerX = canvas.width / 2;
+            playerY = canvas.height / 2;
+            
+            // Create background stars
+            createStars();
+            
+            // Create nebulas
+            createNebulas();
+            
+            // Set up event listeners
+            document.addEventListener('keydown', (e) => {
+                keys[e.key] = true;
+            });
+            
+            document.addEventListener('keyup', (e) => {
+                keys[e.key] = false;
+            });
+            
+            canvas.addEventListener('mousemove', (e) => {
+                const rect = canvas.getBoundingClientRect();
+                mouseX = e.clientX - rect.left;
+                mouseY = e.clientY - rect.top;
+            });
+            
+            canvas.addEventListener('mousedown', () => {
+                isMouseDown = true;
+            });
+            
+            canvas.addEventListener('mouseup', () => {
+                isMouseDown = false;
+            });
+            
+            // Set up UI event listeners
+            document.getElementById('submitAnswer').addEventListener('click', submitAnswer);
+            document.getElementById('continueButton').addEventListener('click', continueToNextLevel);
+            
+            // Add Enter key support for answering
+            document.getElementById('answerInput').addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    submitAnswer();
+                }
+            });
+            
+            // Load saved game state
+            loadGameState();
+            
+            // Show the first question
+            showMathQuestion();
+            
+            // Start game loop
+            requestAnimationFrame(gameLoop);
+        }
+
+        // Create background stars
+        function createStars() {
+            stars = [];
+            for (let i = 0; i < 200; i++) {
+                stars.push({
+                    x: Math.random() * canvas.width,
+                    y: Math.random() * canvas.height,
+                    size: Math.random() * 2 + 1,
+                    brightness: Math.random() * 0.5 + 0.5
+                });
+            }
+        }
+
+        // Create nebula effects
+        function createNebulas() {
+            nebulas = [];
+            for (let i = 0; i < 5; i++) {
+                nebulas.push({
+                    x: Math.random() * canvas.width,
+                    y: Math.random() * canvas.height,
+                    radius: Math.random() * 200 + 100,
+                    color: `rgba(${Math.random() * 100}, ${Math.random() * 100}, ${Math.random() * 255}, 0.1)`
+                });
+            }
+        }
+
+        // Draw background
+        function drawBackground() {
+            // Draw space background
+            ctx.fillStyle = '#000';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // Draw nebulas
+            nebulas.forEach(nebula => {
+                const gradient = ctx.createRadialGradient(
+                    nebula.x, nebula.y, 0,
+                    nebula.x, nebula.y, nebula.radius
+                );
+                gradient.addColorStop(0, nebula.color);
+                gradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
+                
+                ctx.fillStyle = gradient;
+                ctx.beginPath();
+                ctx.arc(nebula.x, nebula.y, nebula.radius, 0, Math.PI * 2);
+                ctx.fill();
+            });
+            
+            // Draw stars
+            stars.forEach(star => {
+                ctx.fillStyle = `rgba(255, 255, 255, ${star.brightness})`;
+                ctx.beginPath();
+                ctx.arc(star.x, star.y, star.size, 0, Math.PI * 2);
+                ctx.fill();
+            });
+        }
+
+        // Draw player ship
+        function drawPlayer() {
+            ctx.save();
+            ctx.translate(playerX, playerY);
+            ctx.rotate(playerAngle);
+            
+            // Ship body
+            ctx.fillStyle = '#3498db';
+            ctx.beginPath();
+            ctx.moveTo(15, 0);
+            ctx.lineTo(-10, 10);
+            ctx.lineTo(-5, 0);
+            ctx.lineTo(-10, -10);
+            ctx.closePath();
+            ctx.fill();
+            
+            // Ship details
+            ctx.fillStyle = '#2980b9';
+            ctx.beginPath();
+            ctx.moveTo(10, 0);
+            ctx.lineTo(-5, 5);
+            ctx.lineTo(-2, 0);
+            ctx.lineTo(-5, -5);
+            ctx.closePath();
+            ctx.fill();
+            
+            // Cockpit
+            ctx.fillStyle = '#1abc9c';
+            ctx.beginPath();
+            ctx.arc(5, 0, 4, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Engine glow when moving or shooting
+            if (playerSpeed > 0 || isMouseDown) {
+                const gradient = ctx.createRadialGradient(-8, 0, 0, -8, 0, 10);
+                gradient.addColorStop(0, '#ff9900');
+                gradient.addColorStop(0.5, '#ff3300');
+                gradient.addColorStop(1, 'transparent');
+                
+                ctx.fillStyle = gradient;
+                ctx.beginPath();
+                ctx.arc(-8, 0, 10, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            
+            ctx.restore();
+        }
+
+        // Update player position and angle based on mouse
+        function updatePlayer() {
+            // Calculate angle to mouse
+            const dx = mouseX - playerX;
+            const dy = mouseY - playerY;
+            playerAngle = Math.atan2(dy, dx);
+            
+            // Move player based on mouse distance from center
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            const maxSpeed = 5;
+            playerSpeed = Math.min(distance / 50, maxSpeed);
+            
+            // Update position
+            playerX += Math.cos(playerAngle) * playerSpeed;
+            playerY += Math.sin(playerAngle) * playerSpeed;
+            
+            // Keep player within bounds
+            playerX = Math.max(20, Math.min(canvas.width - 20, playerX));
+            playerY = Math.max(20, Math.min(canvas.height - 20, playerY));
+            
+            // Handle shooting
+            const currentTime = Date.now();
+            if (isMouseDown && currentTime - lastShotTime > shotCooldown) {
+                shoot();
+                lastShotTime = currentTime;
+            }
+        }
+
+        // Create a bullet
+        function shoot() {
+            const bulletSpeed = 10;
+            const angle = playerAngle;
+            
+            if (isDoubleShot) {
+                // Double shot - create two bullets at slightly different angles
+                bullets.push({
+                    x: playerX + Math.cos(angle) * 15,
+                    y: playerY + Math.sin(angle) * 15,
+                    vx: Math.cos(angle - 0.1) * bulletSpeed,
+                    vy: Math.sin(angle - 0.1) * bulletSpeed,
+                    life: 100
+                });
+                
+                bullets.push({
+                    x: playerX + Math.cos(angle) * 15,
+                    y: playerY + Math.sin(angle) * 15,
+                    vx: Math.cos(angle + 0.1) * bulletSpeed,
+                    vy: Math.sin(angle + 0.1) * bulletSpeed,
+                    life: 100
+                });
+            } else {
+                // Single shot
+                bullets.push({
+                    x: playerX + Math.cos(angle) * 15,
+                    y: playerY + Math.sin(angle) * 15,
+                    vx: Math.cos(angle) * bulletSpeed,
+                    vy: Math.sin(angle) * bulletSpeed,
+                    life: 100
+                });
+            }
+        }
+
+        // Update bullets
+        function updateBullets() {
+            for (let i = bullets.length - 1; i >= 0; i--) {
+                const bullet = bullets[i];
+                
+                // Update position
+                bullet.x += bullet.vx;
+                bullet.y += bullet.vy;
+                
+                // Decrease life
+                bullet.life--;
+                
+                // Remove if out of bounds or life expired
+                if (bullet.x < 0 || bullet.x > canvas.width || 
+                    bullet.y < 0 || bullet.y > canvas.height || 
+                    bullet.life <= 0) {
+                    bullets.splice(i, 1);
+                }
+            }
+        }
+
+        // Draw bullets
+        function drawBullets() {
+            bullets.forEach(bullet => {
+                ctx.fillStyle = '#ffff00';
+                ctx.beginPath();
+                ctx.arc(bullet.x, bullet.y, 3, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Add glow effect
+                const gradient = ctx.createRadialGradient(
+                    bullet.x, bullet.y, 0,
+                    bullet.x, bullet.y, 8
+                );
+                gradient.addColorStop(0, 'rgba(255, 255, 0, 0.8)');
+                gradient.addColorStop(1, 'transparent');
+                
+                ctx.fillStyle = gradient;
+                ctx.beginPath();
+                ctx.arc(bullet.x, bullet.y, 8, 0, Math.PI * 2);
+                ctx.fill();
+            });
+        }
+
+        // Create asteroids based on math answer
+        function createAsteroids(count) {
+            asteroids = [];
+            for (let i = 0; i < count; i++) {
+                const size = Math.random() * 30 + 20;
+                const side = Math.floor(Math.random() * 4);
+                let x, y;
+                
+                // Position asteroid off-screen
+                switch (side) {
+                    case 0: // top
+                        x = Math.random() * canvas.width;
+                        y = -size;
+                        break;
+                    case 1: // right
+                        x = canvas.width + size;
+                        y = Math.random() * canvas.height;
+                        break;
+                    case 2: // bottom
+                        x = Math.random() * canvas.width;
+                        y = canvas.height + size;
+                        break;
+                    case 3: // left
+                        x = -size;
+                        y = Math.random() * canvas.height;
+                        break;
+                }
+                
+                // Velocity towards center
+                const dx = canvas.width / 2 - x;
+                const dy = canvas.height / 2 - y;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+                const speed = Math.random() * 2 + 1;
+                
+                asteroids.push({
+                    x: x,
+                    y: y,
+                    vx: (dx / distance) * speed,
+                    vy: (dy / distance) * speed,
+                    size: size,
+                    rotation: Math.random() * Math.PI * 2,
+                    rotationSpeed: (Math.random() - 0.5) * 0.05,
+                    health: 1
+                });
+            }
+        }
+
+        // Update asteroids
+        function updateAsteroids() {
+            for (let i = asteroids.length - 1; i >= 0; i--) {
+                const asteroid = asteroids[i];
+                
+                // Update position
+                asteroid.x += asteroid.vx;
+                asteroid.y += asteroid.vy;
+                asteroid.rotation += asteroid.rotationSpeed;
+                
+                // Remove if out of bounds
+                if (asteroid.x < -asteroid.size * 2 || asteroid.x > canvas.width + asteroid.size * 2 ||
+                    asteroid.y < -asteroid.size * 2 || asteroid.y > canvas.height + asteroid.size * 2) {
+                    asteroids.splice(i, 1);
+                }
+            }
+        }
+
+        // Draw asteroids
+        function drawAsteroids() {
+            asteroids.forEach(asteroid => {
+                ctx.save();
+                ctx.translate(asteroid.x, asteroid.y);
+                ctx.rotate(asteroid.rotation);
+                
+                // Asteroid shape
+                ctx.fillStyle = '#8B4513';
+                ctx.beginPath();
+                ctx.arc(0, 0, asteroid.size, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Asteroid details
+                ctx.fillStyle = '#A0522D';
+                ctx.beginPath();
+                for (let i = 0; i < 8; i++) {
+                    const angle = (i / 8) * Math.PI * 2;
+                    const radius = asteroid.size * (0.7 + Math.random() * 0.3);
+                    const x = Math.cos(angle) * radius;
+                    const y = Math.sin(angle) * radius;
+                    
+                    if (i === 0) {
+                        ctx.moveTo(x, y);
+                    } else {
+                        ctx.lineTo(x, y);
+                    }
+                }
+                ctx.closePath();
+                ctx.fill();
+                
+                ctx.restore();
+            });
+        }
+
+        // Check collisions
+        function checkCollisions() {
+            // Check bullet-asteroid collisions
+            for (let i = bullets.length - 1; i >= 0; i--) {
+                const bullet = bullets[i];
+                
+                for (let j = asteroids.length - 1; j >= 0; j--) {
+                    const asteroid = asteroids[j];
+                    
+                    const dx = bullet.x - asteroid.x;
+                    const dy = bullet.y - asteroid.y;
+                    const distance = Math.sqrt(dx * dx + dy * dy);
+                    
+                    if (distance < asteroid.size) {
+                        // Hit asteroid
+                        asteroid.health--;
+                        
+                        if (asteroid.health <= 0) {
+                            asteroids.splice(j, 1);
+                            score += 10;
+                        }
+                        
+                        bullets.splice(i, 1);
+                        break;
+                    }
+                }
+            }
+            
+            // Check player-asteroid collisions
+            for (let i = asteroids.length - 1; i >= 0; i--) {
+                const asteroid = asteroids[i];
+                
+                const dx = playerX - asteroid.x;
+                const dy = playerY - asteroid.y;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+                
+                if (distance < asteroid.size + 15) {
+                    // Hit player
+                    playerHealth -= 10;
+                    asteroids.splice(i, 1);
+                    
+                    if (playerHealth <= 0) {
+                        gameOver();
+                    }
+                    
+                    updateHealthBar();
+                }
+            }
+        }
+
+        // Update UI
+        function updateUI() {
+            document.getElementById('levelDisplay').textContent = `Level: ${currentLevel}`;
+            document.getElementById('scoreDisplay').textContent = `Score: ${score}`;
+        }
+
+        // Update health bar
+        function updateHealthBar() {
+            const healthFill = document.getElementById('healthFill');
+            healthFill.style.width = `${playerHealth}%`;
+            
+            if (playerHealth < 30) {
+                healthFill.style.background = 'linear-gradient(to right, #ff0000, #ff3333)';
+            } else if (playerHealth < 70) {
+                healthFill.style.background = 'linear-gradient(to right, #ff0000, #ffff00)';
+            } else {
+                healthFill.style.background = 'linear-gradient(to right, #ff0000, #ffff00)';
+            }
+        }
+
+        // Show math question
+        function showMathQuestion() {
+            gameState = 'question';
+            document.getElementById('mathQuestion').style.display = 'block';
+            document.getElementById('questionText').textContent = mathQuestions[currentLevel - 1];
+            document.getElementById('answerInput').value = '';
+            document.getElementById('answerInput').focus();
+        }
+
+        // Submit answer
+        function submitAnswer() {
+            const answerInput = document.getElementById('answerInput');
+            const answer = parseInt(answerInput.value);
+            const correctAnswer = mathAnswers[currentLevel - 1];
+            
+            if (answer === correctAnswer) {
+                // Correct answer - create asteroids based on answer
+                const asteroidCount = Math.min(correctAnswer, 20); // Limit to 20 asteroids max
+                createAsteroids(asteroidCount);
+                
+                // Hide question and start playing
+                document.getElementById('mathQuestion').style.display = 'none';
+                gameState = 'playing';
+                
+                // Special events based on level
+                handleSpecialEvents();
+            } else {
+                // Wrong answer - try again
+                alert('Wrong answer! Try again. The correct answer was ' + correctAnswer);
+                answerInput.value = '';
+                answerInput.focus();
+            }
+        }
+
+        // Handle special events based on level
+        function handleSpecialEvents() {
+            // Every 3 levels, add an alien ship
+            if (currentLevel % 3 === 0) {
+                // Add alien ship logic here
+            }
+            
+            // Every 5 levels, add a huge asteroid
+            if (currentLevel % 5 === 0) {
+                // Add huge asteroid logic here
+            }
+            
+            // Level 15: Add black hole
+            if (currentLevel === 15) {
+                // Add black hole logic here
+            }
+            
+            // Level 17: Add space worm
+            if (currentLevel === 17) {
+                // Add space worm logic here
+            }
+            
+            // Level 20: Add 10 alien ships
+            if (currentLevel === 20) {
+                // Add 10 alien ships logic here
+            }
+            
+            // Level 21: Add 10 different ships
+            if (currentLevel === 21) {
+                // Add 10 different ships logic here
+            }
+        }
+
+        // Check if level is complete
+        function checkLevelComplete() {
+            if (asteroids.length === 0 && gameState === 'playing') {
+                levelComplete();
+            }
+        }
+
+        // Level complete
+        function levelComplete() {
+            gameState = 'levelComplete';
+            
+            // Show level complete message
+            document.getElementById('gameMessage').style.display = 'block';
+            document.getElementById('messageText').textContent = `Level ${currentLevel} Complete!`;
+            
+            // Save game state
+            saveGameState();
+        }
+
+        // Continue to next level
+        function continueToNextLevel() {
+            document.getElementById('gameMessage').style.display = 'none';
+            
+            if (currentLevel < 21) {
+                currentLevel++;
+                showMathQuestion();
+            } else {
+                gameWin();
+            }
+        }
+
+        // Game over
+        function gameOver() {
+            gameState = 'gameOver';
+            
+            // Show game over message
+            document.getElementById('gameMessage').style.display = 'block';
+            document.getElementById('messageText').textContent = 'Game Over!';
+            document.getElementById('continueButton').textContent = 'Play Again';
+            
+            // Reset game state
+            currentLevel = 1;
+            score = 0;
+            playerHealth = 100;
+            isDoubleShot = false;
+            
+            updateUI();
+            updateHealthBar();
+        }
+
+        // Game win
+        function gameWin() {
+            gameState = 'gameWin';
+            
+            // Show win message
+            document.getElementById('gameMessage').style.display = 'block';
+            document.getElementById('messageText').textContent = 'You Win! Congratulations!';
+            document.getElementById('continueButton').textContent = 'Play Again';
+            
+            // Reset game state
+            currentLevel = 1;
+            score = 0;
+            playerHealth = 100;
+            isDoubleShot = false;
+            
+            updateUI();
+            updateHealthBar();
+        }
+
+        // Save game state to localStorage
+        function saveGameState() {
+            const gameState = {
+                currentLevel: currentLevel,
+                score: score,
+                playerHealth: playerHealth,
+                isDoubleShot: isDoubleShot
+            };
+            
+            localStorage.setItem('spaceMathAsteroids', JSON.stringify(gameState));
+        }
+
+        // Load game state from localStorage
+        function loadGameState() {
+            const savedState = localStorage.getItem('spaceMathAsteroids');
+            
+            if (savedState) {
+                const gameState = JSON.parse(savedState);
+                currentLevel = gameState.currentLevel || 1;
+                score = gameState.score || 0;
+                playerHealth = gameState.playerHealth || 100;
+                isDoubleShot = gameState.isDoubleShot || false;
+                
+                updateUI();
+                updateHealthBar();
+            }
+        }
+
+        // Main game loop
+        function gameLoop(timestamp) {
+            const deltaTime = timestamp - lastTime;
+            lastTime = timestamp;
+            
+            // Clear canvas
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Draw background
+            drawBackground();
+            
+            if (gameState === 'playing') {
+                // Update game objects
+                updatePlayer();
+                updateBullets();
+                updateAsteroids();
+                
+                // Check collisions
+                checkCollisions();
+                
+                // Check if level is complete
+                checkLevelComplete();
+            }
+            
+            // Draw game objects
+            drawAsteroids();
+            drawBullets();
+            drawPlayer();
+            
+            // Update UI
+            updateUI();
+            
+            // Continue game loop
+            requestAnimationFrame(gameLoop);
+        }
+
+        // Start the game when page loads
+        window.onload = init;
+    </script>
+</body>
+</html>
